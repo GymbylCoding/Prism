@@ -1,0 +1,88 @@
+params.particles
+  type = "circle", "rectangle", "image", "custom"
+  
+  width = x
+  height = x
+  
+  color = {r, g, b [, a]}
+  
+  blendMode = "add"
+  
+  getParticle = function(options)
+    return display.newRect(0, 0, 100, math.random(5, 100))
+  end
+  -> getParticle() is used for type = "custom" particles; this is like CBE's build function
+  
+  delayBetweenEmissions = 100
+  
+  emissionCount = 100
+  -> Set to <= 0 for infinite emissions
+  
+  particlesPerEmission = 1
+  
+  physicsParameters = {}
+  -> For physics particles; enabled when movement.method = "physics"
+  
+  inTime = 500
+  lifeTime = 100
+  outTime = 500
+  
+  startAlpha = 0
+  lifeAlpha = 1
+  endAlpha = 0
+
+********************************************************************************
+
+params.position
+	type = "rectangle", "ellipse", "point"
+	
+  width = 100
+	height = 500
+	
+  offsetX = 0
+	offsetY = 100
+  -> Offset from the emitter's center point
+
+********************************************************************************
+
+params.movement
+  type = "none", "random", "angular", "angularSequential", "awayFromOffsetPosition", "towardsOffsetPosition", "towardsOffsetPositionClamped", "customFunction"
+  -> "none" means particles are still
+     "random" means particles move in random directions
+     "angular" means particles move randomly from a list of angles
+     "angularSequential" means particles cycle through the list of angles
+     "awayFromOffsetPosition" means particles move away from the offset (targetOffsetX/Y)
+     "towardsOffsetPosition" means particles move towards the offset
+     "towardsOffsetPositionClamped" means particles move to the offset position (only available when method = "transition")
+     "customFunction" means particles move according to the getVelocity() function (not available when method = "transition")
+
+  angle = {"0-45", "135-180", 90}
+  -> Can be a number for a single angle, a string in the form of "a-b" for a range of angles, or a table containing one or more of either strings or numbers for multiple angles
+
+  speed = 10
+  
+  targetOffsetX = 0
+  targetOffsetY = 0
+  -> For offset position-based movement ("awayFromOffsetPosition", "towardsOffsetPosition", "towardsOffsetPositionClamped")
+  
+  angleSequentialIncrement = 1
+  -> For type = "angularSequential"
+  
+  getVelocity = function(options)
+    return 5, 0
+  end
+  -> For type = "customFunction"
+  
+  velocityRetain = 1
+  xVelocityRetain = 1
+  yVelocityRetain = 1
+  -> Multiplier for velocity each frame (set to something like 0.99 for particles to slow down over the course of their lifetime) - not available when method = "transition". The axis numbers take precedence over the general number.
+  
+  xGravity = 0
+  yGravity = 1
+  -> Not available when method = "transition"
+  
+  method = "frameBased", "physics", "transition"
+  -> "frameBased" means Prism moves particles itself (default if no method is provided; this is the most customizeable method)
+     "physics" means particles get Box2D physics bodies
+     "transition" means Prism moves particles via Corona transitions

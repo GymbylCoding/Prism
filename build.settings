@@ -1,0 +1,12 @@
+--------------------------------------------------------------------------------
+-- build.settings
+--
+-- Landscape
+--------------------------------------------------------------------------------
+
+settings = {
+	orientation = {
+		default = "portrait",
+		supported = {"portrait", "portraitUpsideDown"}
+	}
+}
