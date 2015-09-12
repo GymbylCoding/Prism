@@ -8,17 +8,27 @@ math.randomseed(os.time())
 
 local prism = require("prism")
 
+local particlesText = display.newText({
+	text = "_ particles",
+	fontSize = 24
+})
+
 local emitter = prism.newEmitter({
 	-- Particle building and emission options
 	particles = {
 		type = "image",
-		width = 128,
-		height = 128,
+		image = "particle.png",
+		width = 100,
+		height = 100,
+		color = {{1, 1, 0.1}, {1, 0, 0}},
 		blendMode = "add",
-		particlesPerEmission = 5,
+		particlesPerEmission = 10,
+		delayBetweenEmissions = 100,
 		inTime = 100,
 		lifeTime = 100,
-		outTime = 500
+		outTime = 1000,
+		startProperties = {xScale = 1, yScale = 1},
+		endProperties = {xScale = 0.3, yScale = 0.3}
 	},
 	-- Particle positioning options
 	position = {
@@ -26,18 +36,24 @@ local emitter = prism.newEmitter({
 	},
 	-- Particle movement options
 	movement = {
-		type = "random",
-		velocityRetain = 0.98,
-		xGravity = 0.3,
-		yGravity = 0.3,
+		type = "angular",
+		angle = "0-359",
+		velocityRetain = .97,
+		speed = 1,
+		yGravity = -0.15
 	}
 })
 
 emitter.x, emitter.y = display.contentCenterX, display.contentCenterY
 emitter:startEmitTimer()
 
-timer.performWithDelay(1000, function() emitter:pauseEffect() end)
-timer.performWithDelay(2000, function() emitter:resumeEffect() end)
+Runtime:addEventListener("enterFrame", function()
+	particlesText.text = emitter.numChildren .. " particles"
+	particlesText.x, particlesText.y = display.contentCenterX, display.screenOriginY + particlesText.height * 0.5
+end)
+
+-- timer.performWithDelay(1000, function() emitter:pauseEffect() end)
+-- timer.performWithDelay(2000, function() emitter:resumeEffect() end)
 
 -- Other stuff:
 ---------------

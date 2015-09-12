@@ -15,7 +15,8 @@ lib_prism.config = {
 	enableDeltaTimeCalculation = true,
 	removeOffscreenParticles = false,
 	automaticallyUpdateEmitters = true,
-	randomMovementRange = 10
+	randomMovementRange = 10,
+	numberColorIncludesAlpha = false,
 }
 
 local emitters = {}
@@ -59,6 +60,7 @@ local deviceTop, deviceBottom = display.screenOriginY, display.contentHeight - d
 -- Core EnterFrame Listeners
 --------------------------------------------------------------------------------
 local deltaTimeCalculationOn = false
+local wasDeltaTimeCalculationOn = false
 local globalDeltaTime = 1
 local prevTime = 0
 local fps = display.fps
@@ -90,9 +92,10 @@ end
 
 local onSystemEvent = function(event)
 	if event.type == "applicationSuspend" then
+		wasDeltaTimeCalculationOn = deltaTimeCalculationOn
 		setUseDeltaTimeCalculation(false)
 	elseif event.type == "applicationResume" then
-		setUseDeltaTimeCalculation(deltaTimeCalculationOn)
+		setUseDeltaTimeCalculation(wasDeltaTimeCalculationOn)
 	end
 end
 
@@ -149,6 +152,9 @@ lib_prism.newEmitter = function(params)
 		particleType.startAlpha = particleType.startAlpha or 0
 		particleType.lifeAlpha = particleType.lifeAlpha or 1
 		particleType.endAlpha = particleType.endAlpha or 0
+		particleType.startProperties = particleType.startProperties or {}
+		particleType.lifeProperties = particleType.lifeProperties or {}
+		particleType.endProperties = particleType.endProperties or {}
 
 	local positionType = params.position or {}
 		positionType.type = positionType.type or "ellipse"
@@ -182,7 +188,7 @@ lib_prism.newEmitter = function(params)
 	-- Localize Particle Values
 	------------------------------------------------------------------------------
 	local
-		ptt_type, ptt_width, ptt_height, ptt_halfWidth, ptt_getParticle, ptt_color, ptt_image, ptt_blendMode, ptt_timeline, ptt_delayBetweenEmissions, ptt_emissionCount, ptt_particlesPerEmission, ptt_physicsParameters, ptt_inTime, ptt_lifeTime, ptt_outTime, ptt_lifeSpan, ptt_startAlpha, ptt_lifeAlpha, ptt_endAlpha,
+		ptt_type, ptt_width, ptt_height, ptt_halfWidth, ptt_getParticle, ptt_color, ptt_processedColor, ptt_numColors, ptt_image, ptt_blendMode, ptt_timeline, ptt_delayBetweenEmissions, ptt_emissionCount, ptt_particlesPerEmission, ptt_physicsParameters, ptt_inTime, ptt_lifeTime, ptt_outTime, ptt_lifeSpan, ptt_startAlpha, ptt_lifeAlpha, ptt_endAlpha, ptt_startProperties, ptt_lifeProperties, ptt_endProperties,
 		pst_type, pst_width, pst_height, pst_halfWidth, pst_halfHeight, pst_offsetX, pst_offsetY,
 		mvt_type, mvt_speed, mvt_targetOffsetX, mvt_targetOffsetY, mvt_angle, mvt_derivedAngles, mvt_calculatedAngles, mvt_numCalculatedAngles, mvt_currentAngle, mvt_angleSequentialIncrement, mvt_getVelocity, mvt_speed, mvt_xVelocityRetain, mvt_yVelocityRetain, mvt_xGravity, mvt_yGravity
 
@@ -209,6 +215,9 @@ lib_prism.newEmitter = function(params)
 		ptt_startAlpha = particleType.startAlpha
 		ptt_lifeAlpha = particleType.lifeAlpha
 		ptt_endAlpha = particleType.endAlpha
+		ptt_startProperties = particleType.startProperties
+		ptt_lifeProperties = particleType.lifeProperties
+		ptt_endProperties = particleType.endProperties
 
 		pst_type = positionType.type
 		pst_width = positionType.width
@@ -234,8 +243,12 @@ lib_prism.newEmitter = function(params)
 		mvt_calculatedAngles = {}
 		mvt_numCalculatedAngles = 0
 		mvt_currentAngle = 1
-
+		
+		ptt_processedColor = {}
+		ptt_numColors = 0
+		
 		emitter:processAngles()
+		emitter:processColor()
 	end
 
 	------------------------------------------------------------------------------
@@ -491,12 +504,11 @@ lib_prism.newEmitter = function(params)
 				local p = emitter[i]
 				-- if p._prism_isParticle then
 					local xVelocity, yVelocity = p._prism_xVelocity, p._prism_yVelocity
+					xVelocity = xVelocity * mvt_xVelocityRetain + mvt_xGravity * globalDeltaTime
+					yVelocity = yVelocity * mvt_yVelocityRetain + mvt_yGravity * globalDeltaTime
 
 					p:translate(xVelocity * globalDeltaTime, yVelocity * globalDeltaTime)
-
-					xVelocity = xVelocity * mvt_xVelocityRetain + mvt_xGravity
-					yVelocity = yVelocity * mvt_yVelocityRetain + mvt_yGravity
-
+					
 					p._prism_xVelocity, p._prism_yVelocity = xVelocity, yVelocity
 					
 					if config_removeOffscreenParticles then
@@ -531,7 +543,7 @@ lib_prism.newEmitter = function(params)
 	end
 
 	------------------------------------------------------------------------------
-	-- Calculate Angles
+	-- Process Angles
 	------------------------------------------------------------------------------
 	function emitter:processAngles()
 		if mvt_type ~= "angular" and mvt_type ~= "angularSequential" then return end -- Don't recalculate if we don't need to
@@ -566,6 +578,37 @@ lib_prism.newEmitter = function(params)
 	end -- emitter:processAngles()
 
 	------------------------------------------------------------------------------
+	-- Process Color
+	------------------------------------------------------------------------------
+	function emitter:processColor()
+		local i = 1
+		while ptt_color[i] ~= nil do
+			local color = ptt_color[i]
+			local colorType = type(color)
+			local processed = {}
+			
+			if colorType == "number" then
+				local r, g, b = color, ptt_color[i + 1], ptt_color[i + 2]
+				i = i + 3
+				local a
+				if lib_prism.config.numberColorIncludesAlpha then
+					if type(ptt_color[i]) == "number" then
+						a = ptt_color[i]
+						i = i + 1
+					end
+				end
+				processed = {r, g, b, a}
+			elseif colorType == "table" then
+				processed = color
+				i = i + 1
+			end
+			
+			ptt_processedColor[#ptt_processedColor + 1] = processed
+		end
+		ptt_numColors = #ptt_processedColor
+	end
+
+	------------------------------------------------------------------------------
 	-- Create Particle
 	------------------------------------------------------------------------------
 	function emitter:buildParticle()
@@ -592,11 +635,19 @@ lib_prism.newEmitter = function(params)
 		particle.blendMode = ptt_blendMode
 		particle._prism_isParticle = true
 
-		----------------------------------------------------------------------------
-		-- Initialise Particle
-		----------------------------------------------------------------------------
-		particle:setFillColor(ptt_color[1], ptt_color[2], ptt_color[3], ptt_color[4] or 1)
+		if ptt_numColors == 1 then
+			local c = ptt_processedColor[1]
+			particle:setFillColor(c[1], c[2], c[3], c[4] or 1)
+		else
+			local c = ptt_processedColor[math_random(ptt_numColors)]
+			particle:setFillColor(c[1], c[2], c[3], c[4] or 1)
+		end
 
+		for k, v in pairs(ptt_startProperties) do particle[k] = v end
+
+		----------------------------------------------------------------------------
+		-- Particle Finalize Listener
+		----------------------------------------------------------------------------
 		function particle:finalize()
 			if emitter and emitter.x then
 				emitter:dispatchEvent({
@@ -620,22 +671,30 @@ lib_prism.newEmitter = function(params)
 				target = particle
 			})
 			particle.alpha = ptt_startAlpha
-			particle._prism_lifeTransition = transition_to(particle, {
-				alpha = ptt_lifeAlpha,
-				time = ptt_inTime,
-				onComplete = function()
-					particle.alpha = ptt_lifeAlpha
-					particle._prism_lifeTransition = transition_to(particle, {
-						alpha = ptt_endAlpha,
-						time = ptt_outTime,
-						delay = ptt_lifeTime,
-						onComplete = function()
-							display_remove(particle)
-							particle = nil
-						end
-					})
+			local options = {}
+						
+			for k, v in pairs(ptt_lifeProperties) do
+				options[k] = v
+			end
+			
+			options.alpha = ptt_lifeAlpha
+			options.time = ptt_inTime
+			
+			options.onComplete = function()
+				local options = {}
+				for k, v in pairs(ptt_lifeProperties) do particle[k] = v end
+				for k, v in pairs(ptt_endProperties) do options[k] = v end
+				options.alpha = ptt_endAlpha
+				options.time = ptt_outTime
+				options.delay = ptt_lifeTime
+				options.onComplete = function()
+					display_remove(particle)
+					particle = nil
 				end
-			})
+				particle._prism_lifeTransition = transition_to(particle, options)
+			end
+			
+			particle._prism_lifeTransition = transition_to(particle, options)
 		end
 
 		particle:addEventListener("finalize")
