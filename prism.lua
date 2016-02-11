@@ -128,6 +128,8 @@ lib_prism.newEmitter = function(params)
 
 	local positionParticle, addParticleMovement
 	local particles = {}
+	
+	emitter.emitX, emitter.emitY = 0, 0
 
 	------------------------------------------------------------------------------
 	-- Set Options
@@ -256,7 +258,7 @@ lib_prism.newEmitter = function(params)
 	------------------------------------------------------------------------------
 	positionParticle = function(particle)
 		if pst_type == "point" then
-			particle.x, particle.y = pst_offsetX, pst_offsetY
+			particle.x, particle.y = pst_offsetX + emitter.emitX, pst_offsetY + emitter.emitY
 		elseif pst_type == "ellipse" and pst_width > 0 and pst_height > 0 then
 			local pointX, pointY
 			while true do
@@ -271,10 +273,10 @@ lib_prism.newEmitter = function(params)
 				end
 				if inOuter and not (pointX == pst_offsetX and pointY == pst_offsetY) then break end
 			end
-			particle.x, particle.y = pointX + pst_offsetX, pointY + pst_offsetY
+			particle.x, particle.y = pointX + pst_offsetX + emitter.emitX, pointY + pst_offsetY + emitter.emitY
 		elseif pst_type == "rectangle" then
 			local pointX, pointY = math_random(-pst_halfWidth, pst_halfWidth), math_random(-pst_halfHeight, pst_halfHeight)
-			particle.x, particle.y = pointX + pst_offsetX, pointY + pst_offsetY
+			particle.x, particle.y = pointX + pst_offsetX + emitter.emitX, pointY + pst_offsetY + emitter.emitY
 		end
 	end -- positionParticle()
 

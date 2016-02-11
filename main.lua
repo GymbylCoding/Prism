@@ -4,6 +4,8 @@
 display.setStatusBar(display.HiddenStatusBar)
 math.randomseed(os.time())
 
+system.activate("mouse")
+
 -- ***** --
 
 local prism = require("prism")
@@ -12,6 +14,12 @@ local particlesText = display.newText({
 	text = "_ particles",
 	fontSize = 24
 })
+
+local clickText = display.newText({
+	text = "Left-click to move emission point; right-click to move emitter",
+	fontSize = 22
+})
+clickText.x, clickText.y = display.contentCenterX, display.contentHeight - display.screenOriginY - clickText.height * 0.5 - 10
 
 local emitter = prism.newEmitter({
 	-- Particle building and emission options
@@ -44,12 +52,20 @@ local emitter = prism.newEmitter({
 	}
 })
 
-emitter.x, emitter.y = display.contentCenterX, display.contentCenterY
+emitter.emitX, emitter.emitY = display.contentCenterX, display.contentCenterY
 emitter:startEmitTimer()
 
 Runtime:addEventListener("enterFrame", function()
 	particlesText.text = emitter.numChildren .. " particles"
 	particlesText.x, particlesText.y = display.contentCenterX, display.screenOriginY + particlesText.height * 0.5
+end)
+
+Runtime:addEventListener("mouse", function(event)
+	if event.isPrimaryButtonDown then
+		emitter.emitX, emitter.emitY = emitter:contentToLocal(event.x, event.y)
+	elseif event.isSecondaryButtonDown then
+		emitter.x, emitter.y = event.x - emitter.emitX, event.y - emitter.emitY
+	end
 end)
 
 -- timer.performWithDelay(1000, function() emitter:pauseEffect() end)
@@ -70,3 +86,7 @@ end)
 -- Emitters are display groups, so to layer them relative to your other objects, just insert them as you would anything else
 -- Emitters dispatch events for event listeners; currently, you can listen for the event "particle", which will notify you when a particle is created or destroyed. More listeners are probably coming.
 -- See 'parameters.txt' for each parameter available in the emitter options
+
+-- Changing particle positions:
+-- 1. Setting the vent's X and Y directly will move the entire vent and all particles relative to it. This may be what you want, but in most cases you'll need option 2.
+-- 2. Setting the vent's emitX and emitY properties will move the point at which particles are emitted. This is *relative to the emitter*, so if the emitter's position is something other than 0, you'll need to localize the coordinates of the point you want.
