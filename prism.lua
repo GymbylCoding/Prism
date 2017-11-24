@@ -783,7 +783,7 @@ lib_prism.newEmitter = function(params)
 		emitters[self] = nil
 		if emitTimer then timer_cancel(emitTimer) end
 		for i = self.numChildren, 1, -1 do
-			if self[i]._prism_isParticle then
+			if self[i] and self[i]._prism_isParticle then
 				display_remove(self[i])
 				self[i] = nil
 			end
